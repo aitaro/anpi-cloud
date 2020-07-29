@@ -19,7 +19,7 @@ jobs:
       env:
         NODE_ENV: development
     - name: build
-      run: yarn generate
+      run: yarn build && yarn export
       env:
         APP_ENV: production
         NUXT_ENV_APIKEY: ${{ secrets.NUXT_ENV_APIKEY }}

@@ -1,0 +1,66 @@
+name: Deploy
+on:
+  push:
+    branches: [ master ]
+jobs:
+  front:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front
+    steps:
+    - uses: actions/checkout@v2
+    - name: setup node
+      uses: actions/setup-node@v1
+      with:
+        node-version: '12.x'
+    - name: install
+      run: yarn
+      env:
+        NODE_ENV: development
+    - name: build
+      run: yarn generate
+      env:
+        APP_ENV: production
+        NUXT_ENV_APIKEY: ${{ secrets.NUXT_ENV_APIKEY }}
+        NUXT_ENV_AUTH_DOMAIN: ${{ secrets.NUXT_ENV_AUTH_DOMAIN }}
+        NUXT_ENV_DATABASE_URL: ${{ secrets.NUXT_ENV_DATABASE_URL }}
+        NUXT_ENV_PROJECT_ID: ${{ secrets.NUXT_ENV_PROJECT_ID }}
+        NUXT_ENV_STORAGE_BUCKET: ${{ secrets.NUXT_ENV_STORAGE_BUCKET }}
+        NUXT_ENV_MESSAGING_SENDER_ID: ${{ secrets.NUXT_ENV_MESSAGING_SENDER_ID }}
+        NUXT_ENV_APP_ID: ${{ secrets.NUXT_ENV_APP_ID }}
+    - name: Deploy Firebase Hosting
+      uses: w9jds/firebase-action@master
+      with:
+        args: deploy --only hosting
+      env:
+        PROJECT_ID: anpi-cloud-prod
+        GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        PROJECT_PATH: ./front
+  firestore:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Deploy Firestore rules and index
+      uses: w9jds/firebase-action@master
+      with:
+        args: deploy --only firestore
+      env:
+        PROJECT_ID: anpi-cloud-prod
+        GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        PROJECT_PATH: ./firestore
+  functions_handler:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+      with:
+        version: '290.0.1'
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: anpi-cloud-prod
+    - name: Deploy Functions
+      run: |
+        gcloud functions deploy handler --allow-unauthenticated --source ./functions/handler \
+        --runtime python37 --trigger-http --region=asia-northeast1 \
+        --set-env-vars ENV=production

@@ -1,0 +1,92 @@
+version: "3.7"
+
+services:
+  front:
+    build:
+      context: ./front
+    ports:
+      - 3000:3000
+    volumes:
+      - ./front:/front
+      - front_node_modules:/front/node_modules
+    tty: true
+    stdin_open: true
+    command: ash -c "yarn && yarn dev"
+    environment:
+      - APP_ENV=development
+      - NUXT_ENV_APIKEY
+      - NUXT_ENV_AUTH_DOMAIN
+      - NUXT_ENV_DATABASE_URL
+      - NUXT_ENV_PROJECT_ID
+      - NUXT_ENV_STORAGE_BUCKET
+      - NUXT_ENV_MESSAGING_SENDER_ID
+      - NUXT_ENV_APP_ID
+      - NUXT_ENV_MEASUREMENT_ID
+
+  functions_handler:
+    build:
+      context: ./functions/handler
+    ports:
+      - 8080:8080
+    volumes:
+      - ./functions/handler:/handler
+      - ./firebase-admin.json:/handler/firebase-admin.json
+    command: functions-framework --target handler
+    environment:
+      - ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/handler/firebase-admin.json
+
+  functions_sent_number:
+    build:
+      context: ./functions/sent_number
+    ports:
+      - 8081:8080
+    volumes:
+      - ./functions/sent_number:/sent_number
+      - ./firebase-admin.json:/sent_number/firebase-admin.json
+    command: functions-framework --target sent_number
+    environment:
+      - ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/sent_number/firebase-admin.json
+
+  functions_send_message:
+    build:
+      context: ./functions/send_message
+    ports:
+      - 8082:8080
+    volumes:
+      - ./functions/send_message:/send_message
+      - ./firebase-admin.json:/send_message/firebase-admin.json
+    command: functions-framework --target send_message
+    environment:
+      - ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/send_message/firebase-admin.json
+
+  functions_send_safety_notification:
+    build:
+      context: ./functions/send_safety_notification
+    ports:
+      - 8083:8080
+    volumes:
+      - ./functions/send_safety_notification:/send_safety_notification
+      - ./firebase-admin.json:/send_safety_notification/firebase-admin.json
+    command: functions-framework --target send_safety_notification
+    environment:
+      - ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/send_safety_notification/firebase-admin.json
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+
+  firestore:
+    build:
+      context: ./firestore
+    volumes:
+      - ./firestore:/firestore
+    command: ash -c '/firestore/auto_deploy.sh'
+    environment:
+      - FIREBASE_TOKEN
+      - FIREBASE_PJNAME
+
+volumes:
+  front_node_modules:
+    driver: local

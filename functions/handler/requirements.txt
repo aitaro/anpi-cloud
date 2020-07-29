@@ -1,0 +1,2 @@
+boto3==1.14.16
+firebase-admin>=4.3.0
